@@ -20,13 +20,14 @@ jobs:
     - name: Configure kubeconfig
       run: |
         mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config-original
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
         
-        # ✅ CORREÇÃO PARA USUÁRIO NTI
-        cat $HOME/.kube/config-original | sed 's|C:/Users/NTI/|/home/runner/|g' | sed 's|C:\\Users\\NTI\\|/home/runner/|g' | sed 's|\\|/|g' > $HOME/.kube/config
-        
-        echo "=== Config file content ==="
+        # Verificar se o config está correto
+        echo "=== Kubeconfig content ==="
         cat $HOME/.kube/config
+        
+        echo "=== Validating kubeconfig ==="
+        kubectl config view
 
     - name: Verify cluster access
       run: kubectl cluster-info
