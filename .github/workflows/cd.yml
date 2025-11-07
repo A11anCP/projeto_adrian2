@@ -1,0 +1,58 @@
+name: CD - Deploy to Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["CI - Build & Push Docker"]
+    types: [ "completed" ]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set vars
+      id: vars
+      run: |
+        echo "IMAGE=SEUUSUARIO/monitor" >> $GITHUB_OUTPUT
+        echo "TAG_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+        echo "NAMESPACE=${{ secrets.K8S_NAMESPACE || 'default' }}" >> $GITHUB_OUTPUT
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+
+    - name: Configure kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+
+    - name: Apply base manifests
+      run: |
+        kubectl apply -f k8s/service.yaml || true
+        kubectl apply -f k8s/prometheus-config.yaml || true
+        kubectl apply -f k8s/prometheus-deployment.yaml || true
+        kubectl apply -f k8s/grafana-deployment.yaml || true
+        kubectl apply -f k8s/grafana-service.yaml || true
+
+    - name: Apply app deployment
+      run: |
+        kubectl apply -f k8s/deployment.yaml || true
+
+    - name: Set image to new tag
+      run: |
+        kubectl set image deployment/monitor monitor=${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.TAG_SHA }}
+
+    - name: Wait rollout
+      run: |
+        kubectl rollout status deployment/monitor --timeout=120s
+
+    - name: Show services
+      run: |
+        kubectl get svc
+        kubectl get pods
