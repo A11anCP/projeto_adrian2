@@ -22,15 +22,12 @@ jobs:
         mkdir -p $HOME/.kube
         echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
         
-        # Verificar se o config está correto
-        echo "=== Kubeconfig content ==="
-        cat $HOME/.kube/config
+        # Corrigir barras invertidas restantes
+        sed -i 's|\\|/|g' $HOME/.kube/config
         
-        echo "=== Validating kubeconfig ==="
+        echo "=== Kubeconfig validado ==="
         kubectl config view
-
-    - name: Verify cluster access
-      run: kubectl cluster-info
+        kubectl cluster-info
 
     - name: Apply Kubernetes manifests
       run: |
