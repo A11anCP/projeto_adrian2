@@ -75,6 +75,7 @@ app.use((req, res, next) => {
 
 app.get('/', (req, res) => {
     res.send("Prometheus + Grafana + Kubernetes + NGINX - Sistema de Monitoramento");
+    res.send("🚀 CI/CD TESTE - Deploy Automático " + new Date().toLocaleString());
 });
 
 app.get('/healthz', (req, res) => {
