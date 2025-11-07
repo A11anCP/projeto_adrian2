@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: prometheus
+spec:
+    replicas: 1  # Apenas uma instância do Prometheus
+    selector:
+        matchLabels:
+            app: prometheus
+    template:
+        metadata:
+            labels:
+                app: prometheus
+        spec:
+            containers:
+            - name: prometheus
+              image: prom/prometheus:latest  # Imagem oficial do Prometheus
+              ports:
+              - containerPort: 9090  # Porta padrão do Prometheus
+              volumeMounts:
+              - name: prometheus-config-volume
+                mountPath: /etc/prometheus  # Monta configuração neste diretório
+            volumes:
+            - name: prometheus-config-volume
+              configMap:
+                name: prometheus-config  # Configuração via ConfigMap
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: prometheus
+spec:
+    type: NodePort  # Tipo NodePort (com typo) para acesso externo
+    ports:
+    - port: 9090  # Porta do service
+      targetPort: 9090  # Porta do container
+    selector:
+        app: prometheus  # Conecta aos pods do Prometheus

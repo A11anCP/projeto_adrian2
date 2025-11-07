@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: grafana
+spec:
+    replicas: 1  # Apenas uma instância do Grafana
+    selector:
+        matchLabels:
+            app: grafana  # Seleciona pods com este label
+    template:
+        metadata:
+            labels:
+                app: grafana  # Label aplicado aos pods criados
+        spec:
+            containers:
+            - name: grafana
+              image: grafana/grafana:latest  # Imagem oficial do Grafana
+              ports:
+              - containerPort: 3000  # Porta padrão do Grafana
