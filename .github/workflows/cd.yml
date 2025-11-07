@@ -22,10 +22,7 @@ jobs:
         mkdir -p $HOME/.kube
         echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
         
-        # Corrigir barras invertidas restantes
-        sed -i 's|\\|/|g' $HOME/.kube/config
-        
-        echo "=== Kubeconfig validado ==="
+        echo "=== Validando kubeconfig ==="
         kubectl config view
         kubectl cluster-info
 
@@ -43,5 +40,7 @@ jobs:
 
     - name: Verify deployment
       run: |
+        echo "=== Deployment Status ==="
         kubectl get pods -l app=monitor
         kubectl get svc
+        kubectl get deployments
