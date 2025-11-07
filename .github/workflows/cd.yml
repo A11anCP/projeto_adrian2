@@ -27,7 +27,7 @@ jobs:
       run: |
         echo "IMAGE=allanprust/monitor" >> $GITHUB_OUTPUT
         echo "TAG_SHA=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
-        echo "NAMESPACE=${{ secrets.K8S_NAMESPACE || 'default' }}" >> $GITHUB_OUTPUT
+        echo "NAMESPACE=default" >> $GITHUB_OUTPUT  # ⬅️ CORRIGIDO: valor fixo
 
     - name: Set up kubectl
       uses: azure/setup-kubectl@v4
@@ -37,49 +37,51 @@ jobs:
     - name: Configure kubeconfig
       run: |
         mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config-original
+        
+        # ⬅️ ADICIONADO: Corrigir caminhos do Windows para Linux
+        cat $HOME/.kube/config-original | sed 's|C:/Users/Pichau/|/home/runner/|g' | sed 's|C:\\Users\\Pichau\\|/home/runner/|g' | sed 's|\\|/|g' > $HOME/.kube/config
+        
+        # Verificar se o config está correto
+        echo "=== Config file content ==="
+        cat $HOME/.kube/config
 
     - name: Verify cluster access
       run: kubectl cluster-info
 
     - name: Create namespace if not exists
       run: |
-        kubectl get ns ${{ steps.vars.outputs.NAMESPACE }} || \
-        kubectl create ns ${{ steps.vars.outputs.NAMESPACE }}
+        kubectl get ns default || true  # ⬅️ CORRIGIDO: namespace fixo
 
     - name: Apply Kubernetes manifests
       run: |
         echo "Applying all Kubernetes manifests..."
-        kubectl apply -n ${{ steps.vars.outputs.NAMESPACE }} -f k8s/ --recursive || true
+        kubectl apply -f k8s/ --recursive || true
 
     - name: Update deployment image
       run: |
         kubectl set image deployment/monitor \
           monitor=${{ steps.vars.outputs.IMAGE }}:latest \
-          -n ${{ steps.vars.outputs.NAMESPACE }} \
           --record
 
     - name: Wait for rollout to complete
       run: |
-        kubectl rollout status deployment/monitor \
-          -n ${{ steps.vars.outputs.NAMESPACE }} \
-          --timeout=180s
+        kubectl rollout status deployment/monitor --timeout=180s
 
     - name: Verify deployment
       run: |
         echo "=== Current Pods ==="
-        kubectl get pods -n ${{ steps.vars.outputs.NAMESPACE }} -l app=monitor
+        kubectl get pods -l app=monitor
         
         echo "=== Current Services ==="
-        kubectl get svc -n ${{ steps.vars.outputs.NAMESPACE }}
+        kubectl get svc
         
         echo "=== Deployment Status ==="
-        kubectl get deployment -n ${{ steps.vars.outputs.NAMESPACE }}
+        kubectl get deployment
 
     - name: Health check
       run: |
         echo "Performing health check..."
         kubectl wait --for=condition=ready \
           pod -l app=monitor \
-          --timeout=120s \
-          -n ${{ steps.vars.outputs.NAMESPACE }}
+          --timeout=120s
