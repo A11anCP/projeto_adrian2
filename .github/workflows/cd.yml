@@ -3,7 +3,7 @@ name: CD - Deploy to Kubernetes
 on:
   workflow_run:
     workflows: ["CI - Build & Push Docker"]
-    types: [ "completed" ]
+    types: ["completed"]
 
 jobs:
   deploy:
@@ -17,48 +17,43 @@ jobs:
     - name: Set up kubectl
       uses: azure/setup-kubectl@v4
 
-    - name: Configure kubeconfig
+    # ⚙️ Configuração do kubeconfig a partir do segredo KUBE_CONFIG_DATA
+    - name: Configure kubeconfig from secret
       run: |
         mkdir -p $HOME/.kube
-        # Método alternativo sem HEREDOC
-        echo "apiVersion: v1" > $HOME/.kube/config
-        echo "clusters:" >> $HOME/.kube/config
-        echo "- cluster:" >> $HOME/.kube/config
-        echo "    insecure-skip-tls-verify: true" >> $HOME/.kube/config
-        echo "    server: https://127.0.0.1:61201" >> $HOME/.kube/config
-        echo "  name: minikube" >> $HOME/.kube/config
-        echo "contexts:" >> $HOME/.kube/config
-        echo "- context:" >> $HOME/.kube/config
-        echo "    cluster: minikube" >> $HOME/.kube/config
-        echo "    user: minikube" >> $HOME/.kube/config
-        echo "  name: minikube" >> $HOME/.kube/config
-        echo "current-context: minikube" >> $HOME/.kube/config
-        echo "kind: Config" >> $HOME/.kube/config
-        echo "users:" >> $HOME/.kube/config
-        echo "- name: minikube" >> $HOME/.kube/config
-        echo "  user: {}" >> $HOME/.kube/config
-        
-        echo "=== Kubeconfig criado ==="
-        cat $HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+        echo "✅ Kubeconfig configurado com sucesso"
+        kubectl config current-context
 
+    # 🧪 Teste de conexão com o cluster
     - name: Test cluster access
       run: |
-        kubectl config view
+        echo "🔍 Verificando acesso ao cluster..."
         kubectl cluster-info
+        kubectl get nodes
 
+    # 🚀 Aplicar os manifestos do Kubernetes
     - name: Apply Kubernetes manifests
       run: |
-        kubectl apply -f k8s/ --recursive || true
+        echo "📦 Aplicando manifestos..."
+        kubectl apply -f k8s/ --recursive
 
+    # 🖼️ Atualizar a imagem do deployment com a versão mais recente
     - name: Update deployment image
       run: |
+        echo "🖼️ Atualizando imagem do deployment..."
         kubectl set image deployment/monitor monitor=allanprust/monitor:latest
 
+    # ⏱️ Aguardar o rollout do deployment
     - name: Wait for rollout
       run: |
+        echo "⏳ Aguardando rollout..."
         kubectl rollout status deployment/monitor --timeout=180s
 
+    # 🔍 Verificar status final de pods e serviços
     - name: Verify deployment
       run: |
+        echo "🔎 Verificando pods e serviços..."
         kubectl get pods -l app=monitor
         kubectl get svc
