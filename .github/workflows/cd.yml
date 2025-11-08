@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        shell: pwsh  # Usa o PowerShell Core (melhor para scripts YAML)
+        shell: powershell  # Usa o PowerShell Core (melhor para scripts YAML)
 
     steps:
       - name: Checkout code
