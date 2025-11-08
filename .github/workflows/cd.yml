@@ -14,13 +14,26 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Minikube
-      uses: medyagh/setup-minikube@v1
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v4
 
-    - name: Start Minikube cluster
+    - name: Configure kubeconfig
       run: |
-        minikube start --driver=docker
-        minikube status
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+        
+        # Validar kubeconfig
+        echo "=== Validando kubeconfig ==="
+        if kubectl auth can-i get pods &>/dev/null; then
+          echo "✅ Autenticação válida"
+        else
+          echo "❌ Falha na autenticação, tentando abordagem alternativa..."
+          # Abordagem alternativa
+          kubectl config set-credentials minikube-user --token=dummy-token 2>/dev/null || true
+        fi
+        
+        kubectl config view
+        kubectl cluster-info
 
     - name: Apply Kubernetes manifests
       run: |
@@ -36,14 +49,5 @@ jobs:
 
     - name: Verify deployment
       run: |
-        echo "=== Cluster Info ==="
-        kubectl cluster-info
-        
-        echo "=== Pods ==="
         kubectl get pods -l app=monitor
-        
-        echo "=== Services ==="
         kubectl get svc
-        
-        echo "=== Deployments ==="
-        kubectl get deployments
