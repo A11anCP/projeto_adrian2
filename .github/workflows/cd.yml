@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        shell: pwsh  # 👈 força uso do PowerShell
+        shell: powershell  # 👈 força uso do PowerShell
 
     steps:
       - name: Checkout code
