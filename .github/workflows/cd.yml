@@ -14,16 +14,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v4
+    - name: Setup Minikube
+      uses: medyagh/setup-minikube@v1
 
-    - name: Configure kubeconfig
+    - name: Start Minikube cluster
       run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
-        echo "=== Kubeconfig validado ==="
-        kubectl config view
-        kubectl cluster-info
+        minikube start --driver=docker
+        minikube status
 
     - name: Apply Kubernetes manifests
       run: |
@@ -39,5 +36,14 @@ jobs:
 
     - name: Verify deployment
       run: |
+        echo "=== Cluster Info ==="
+        kubectl cluster-info
+        
+        echo "=== Pods ==="
         kubectl get pods -l app=monitor
+        
+        echo "=== Services ==="
         kubectl get svc
+        
+        echo "=== Deployments ==="
+        kubectl get deployments
