@@ -3,7 +3,7 @@ name: CD - Deploy to Kubernetes
 on:
   workflow_run:
     workflows: ["CI - Build & Push Docker"]
-    types: [ "completed" ]
+    types: ["completed"]
 
 jobs:
   deploy:
@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell  # ⚙️ usa PowerShell clássico
+        shell: pwsh  # Usa o PowerShell Core (melhor para scripts YAML)
 
     steps:
       - name: Checkout code
@@ -22,35 +22,41 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
         run: |
-          New-Item -ItemType Directory -Force -Path "$HOME\.kube"
+          Write-Host "🔧 Criando diretório kubeconfig..."
+          New-Item -ItemType Directory -Force -Path "$HOME/.kube" | Out-Null
+
+          Write-Host "🔐 Decodificando kubeconfig..."
           $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:KUBE_CONFIG_DATA))
-          $decoded | Out-File -FilePath "$HOME\.kube\config" -Encoding ascii
-          Write-Host "Kubeconfig configurado com sucesso"
+          $decoded | Out-File -FilePath "$HOME/.kube/config" -Encoding ascii
+
+          Write-Host "✅ Kubeconfig configurado com sucesso!"
 
       - name: Test cluster access
         run: |
-          Write-Host "Verificando cluster..."
+          Write-Host "🔍 Verificando cluster..."
           kubectl config current-context
           kubectl cluster-info
 
       - name: Apply Kubernetes manifests
         run: |
-          Write-Host "Aplicando manifestos Kubernetes..."
+          Write-Host "🚀 Aplicando manifestos Kubernetes..."
           kubectl apply -f k8s/ --recursive
 
       - name: Update deployment image
         run: |
-          Write-Host "Atualizando imagem do deployment..."
+          Write-Host "🔄 Atualizando imagem do deployment..."
           kubectl set image deployment/monitor monitor=allanprust/monitor:latest
 
       - name: Wait for rollout
         run: |
-          Write-Host "Aguardando atualização do deployment..."
+          Write-Host "⏳ Aguardando atualização do deployment..."
           kubectl rollout status deployment/monitor --timeout=180s
 
       - name: Verify deployment
         run: |
-          Write-Host "Verificando pods e serviços..."
+          Write-Host "📦 Verificando pods e serviços..."
           kubectl get pods -l app=monitor
           kubectl get svc
