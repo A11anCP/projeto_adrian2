@@ -17,41 +17,41 @@ jobs:
     - name: Set up kubectl
       uses: azure/setup-kubectl@v4
 
-    # ⚙️ Configuração do kubeconfig a partir do segredo KUBE_CONFIG_DATA
+    # ⚙️ Configuração do kubeconfig (decodifica o segredo Base64)
     - name: Configure kubeconfig from secret
       run: |
         mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" > $HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
         chmod 600 $HOME/.kube/config
         echo "✅ Kubeconfig configurado com sucesso"
-        kubectl config current-context
+        kubectl config current-context || echo "⚠️ Nenhum contexto atual definido (verifique o kubeconfig)"
 
-    # 🧪 Teste de conexão com o cluster
+    # 🧪 Testar conexão com o cluster
     - name: Test cluster access
       run: |
-        echo "🔍 Verificando acesso ao cluster..."
+        echo "🔍 Verificando cluster..."
         kubectl cluster-info
         kubectl get nodes
 
-    # 🚀 Aplicar os manifestos do Kubernetes
+    # 🚀 Aplicar manifestos Kubernetes
     - name: Apply Kubernetes manifests
       run: |
         echo "📦 Aplicando manifestos..."
         kubectl apply -f k8s/ --recursive
 
-    # 🖼️ Atualizar a imagem do deployment com a versão mais recente
+    # 🖼️ Atualizar a imagem do deployment
     - name: Update deployment image
       run: |
         echo "🖼️ Atualizando imagem do deployment..."
         kubectl set image deployment/monitor monitor=allanprust/monitor:latest
 
-    # ⏱️ Aguardar o rollout do deployment
+    # ⏱️ Aguardar rollout
     - name: Wait for rollout
       run: |
         echo "⏳ Aguardando rollout..."
         kubectl rollout status deployment/monitor --timeout=180s
 
-    # 🔍 Verificar status final de pods e serviços
+    # 🔍 Verificar pods e serviços
     - name: Verify deployment
       run: |
         echo "🔎 Verificando pods e serviços..."
