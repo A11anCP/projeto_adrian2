@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        shell: powershell  # 👈 força uso do PowerShell
+        shell: powershell  # ⚙️ usa PowerShell clássico
 
     steps:
       - name: Checkout code
@@ -26,27 +26,31 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$HOME\.kube"
           $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:KUBE_CONFIG_DATA))
           $decoded | Out-File -FilePath "$HOME\.kube\config" -Encoding ascii
-          Write-Host "✅ Kubeconfig configurado com sucesso"
+          Write-Host "Kubeconfig configurado com sucesso"
 
       - name: Test cluster access
         run: |
-          Write-Host "🔍 Verificando cluster..."
+          Write-Host "Verificando cluster..."
           kubectl config current-context
           kubectl cluster-info
 
       - name: Apply Kubernetes manifests
         run: |
+          Write-Host "Aplicando manifestos Kubernetes..."
           kubectl apply -f k8s/ --recursive
 
       - name: Update deployment image
         run: |
+          Write-Host "Atualizando imagem do deployment..."
           kubectl set image deployment/monitor monitor=allanprust/monitor:latest
 
       - name: Wait for rollout
         run: |
+          Write-Host "Aguardando atualização do deployment..."
           kubectl rollout status deployment/monitor --timeout=180s
 
       - name: Verify deployment
         run: |
+          Write-Host "Verificando pods e serviços..."
           kubectl get pods -l app=monitor
           kubectl get svc
