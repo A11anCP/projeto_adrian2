@@ -12,7 +12,7 @@ jobs:
 
     defaults:
       run:
-        shell: bash   # 🔥 força o uso do Git Bash em vez do PowerShell
+        shell: pwsh  # 👈 força uso do PowerShell
 
     steps:
       - name: Checkout code
@@ -23,14 +23,15 @@ jobs:
 
       - name: Configure kubeconfig
         run: |
-          mkdir -p $HOME/.kube
-          echo "$KUBE_CONFIG_DATA" | base64 --decode > $HOME/.kube/config
-          echo "✅ Kubeconfig configurado com sucesso"
+          New-Item -ItemType Directory -Force -Path "$HOME\.kube"
+          $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:KUBE_CONFIG_DATA))
+          $decoded | Out-File -FilePath "$HOME\.kube\config" -Encoding ascii
+          Write-Host "✅ Kubeconfig configurado com sucesso"
 
       - name: Test cluster access
         run: |
-          echo "🔍 Verificando cluster..."
-          kubectl config current-context || echo "⚠️ Nenhum contexto atual"
+          Write-Host "🔍 Verificando cluster..."
+          kubectl config current-context
           kubectl cluster-info
 
       - name: Apply Kubernetes manifests
