@@ -20,18 +20,29 @@ jobs:
     - name: Configure kubeconfig
       run: |
         mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > $HOME/.kube/config
+        # Método alternativo sem HEREDOC
+        echo "apiVersion: v1" > $HOME/.kube/config
+        echo "clusters:" >> $HOME/.kube/config
+        echo "- cluster:" >> $HOME/.kube/config
+        echo "    insecure-skip-tls-verify: true" >> $HOME/.kube/config
+        echo "    server: https://127.0.0.1:61201" >> $HOME/.kube/config
+        echo "  name: minikube" >> $HOME/.kube/config
+        echo "contexts:" >> $HOME/.kube/config
+        echo "- context:" >> $HOME/.kube/config
+        echo "    cluster: minikube" >> $HOME/.kube/config
+        echo "    user: minikube" >> $HOME/.kube/config
+        echo "  name: minikube" >> $HOME/.kube/config
+        echo "current-context: minikube" >> $HOME/.kube/config
+        echo "kind: Config" >> $HOME/.kube/config
+        echo "users:" >> $HOME/.kube/config
+        echo "- name: minikube" >> $HOME/.kube/config
+        echo "  user: {}" >> $HOME/.kube/config
         
-        # Validar kubeconfig
-        echo "=== Validando kubeconfig ==="
-        if kubectl auth can-i get pods &>/dev/null; then
-          echo "✅ Autenticação válida"
-        else
-          echo "❌ Falha na autenticação, tentando abordagem alternativa..."
-          # Abordagem alternativa
-          kubectl config set-credentials minikube-user --token=dummy-token 2>/dev/null || true
-        fi
-        
+        echo "=== Kubeconfig criado ==="
+        cat $HOME/.kube/config
+
+    - name: Test cluster access
+      run: |
         kubectl config view
         kubectl cluster-info
 
